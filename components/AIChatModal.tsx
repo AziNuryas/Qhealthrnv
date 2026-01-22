@@ -1,22 +1,22 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  Dimensions,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -53,19 +53,18 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const [userToken, setUserToken] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] =
-    useState<'connecting' | 'online' | 'offline'>('connecting');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'online' | 'offline'>('connecting');
   const [apiLoading, setApiLoading] = useState(false);
 
-  // Center modal animation (BMIModal-style)
+  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.85)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // === FIX API BASE ===
+  // API BASE
   const API_BASE_URL = 'https://nonabstractly-unmoaning-tameka.ngrok-free.dev';
 
   useEffect(() => {
@@ -73,59 +72,61 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
       loadToken();
       testAPIConnection();
 
-      // reset
+      // Reset animations
       fadeAnim.setValue(0);
-      scaleAnim.setValue(0.85);
-      slideAnim.setValue(40);
+      scaleAnim.setValue(0.9);
+      slideAnim.setValue(30);
       backdropOpacity.setValue(0);
 
+      // Entrance animation
       Animated.parallel([
         Animated.timing(backdropOpacity, {
           toValue: 1,
-          duration: 260,
+          duration: 180,
           useNativeDriver: true,
         }),
         Animated.spring(fadeAnim, {
           toValue: 1,
-          tension: 60,
-          friction: 8,
+          tension: 70,
+          friction: 7,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
-          tension: 60,
-          friction: 8,
+          tension: 70,
+          friction: 7,
           useNativeDriver: true,
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
-          tension: 60,
-          friction: 8,
+          tension: 70,
+          friction: 7,
           useNativeDriver: true,
         }),
       ]).start(() => {
-        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 150);
+        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
       });
     } else {
+      // Exit animation
       Animated.parallel([
         Animated.timing(backdropOpacity, {
           toValue: 0,
-          duration: 180,
+          duration: 150,
           useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 180,
+          duration: 150,
           useNativeDriver: true,
         }),
         Animated.timing(scaleAnim, {
-          toValue: 0.85,
-          duration: 180,
+          toValue: 0.9,
+          duration: 150,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
-          toValue: 40,
-          duration: 180,
+          toValue: 30,
+          duration: 150,
           useNativeDriver: true,
         }),
       ]).start();
@@ -135,7 +136,7 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
   const loadToken = async () => {
     try {
       const token = await AsyncStorage.getItem('auth_token');
-      console.log('TOKEN LOADED:', token);
+      console.log('✅ Token loaded:', token ? 'Available' : 'Not found');
       setUserToken(token);
     } catch (error) {
       console.error('❌ Token load error:', error);
@@ -145,7 +146,9 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
   const testAPIConnection = async () => {
     try {
       setConnectionStatus('connecting');
+      console.log('🔄 Testing API connection...');
 
+      const startTime = Date.now();
       const testResponse = await fetch(`${API_BASE_URL}/api/chatbot`, {
         method: 'POST',
         headers: {
@@ -154,15 +157,17 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
           'ngrok-skip-browser-warning': 'true',
           'X-Mobile-Request': 'true',
         },
-        body: JSON.stringify({ message: 'test' }),
+        body: JSON.stringify({ message: 'ping' }),
       });
 
+      const responseTime = Date.now() - startTime;
+      
       if (testResponse.ok) {
         setConnectionStatus('online');
-        console.log('✅ API Connection: ONLINE');
+        console.log(`✅ API Connection: ONLINE (${responseTime}ms)`);
       } else {
         setConnectionStatus('offline');
-        console.log('❌ API Connection: OFFLINE');
+        console.log(`❌ API Connection: OFFLINE (HTTP ${testResponse.status})`);
       }
     } catch (error) {
       setConnectionStatus('offline');
@@ -173,6 +178,7 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
   const callChatAPI = async (userMessage: string): Promise<ChatAPIResponse> => {
     try {
       setApiLoading(true);
+      console.log('🔄 Sending message to API...');
 
       const headers: any = {
         'Content-Type': 'application/json',
@@ -185,20 +191,27 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
         headers['Authorization'] = `Bearer ${userToken}`;
       }
 
+      const startTime = Date.now();
       const response = await fetch(`${API_BASE_URL}/api/chatbot`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ message: userMessage }),
       });
 
+      const responseTime = Date.now() - startTime;
+      console.log(`📡 API Response time: ${responseTime}ms`);
+
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        console.error(`❌ HTTP ${response.status}:`, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
       }
 
       const data: ChatAPIResponse = await response.json();
+      console.log('✅ API Response received:', { success: data.success, api: data.api });
 
       if (!data.success) {
+        console.error('❌ API Response not successful:', data.error);
         throw new Error(data.error || 'API response not successful');
       }
 
@@ -224,8 +237,9 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
       return;
     }
 
+    const userMessageId = Date.now();
     const userMessage: Message = {
-      id: Date.now(),
+      id: userMessageId,
       text: message,
       isUser: true,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -236,29 +250,35 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
     setIsTyping(true);
 
     try {
-      const apiResponse = await callChatAPI(userMessage.text);
+      const apiResponse = await callChatAPI(message);
 
-      const aiResponse: Message = {
-        id: Date.now() + 1,
+      const aiMessage: Message = {
+        id: Date.now(),
         text: apiResponse.reply,
         isUser: false,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages(prev => [...prev, aiResponse]);
+      
+      setMessages(prev => [...prev, aiMessage]);
       setConnectionStatus('online');
+      
+      // Scroll to bottom after adding message
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (error: any) {
-      setMessages(prev => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: `❌ **API Error**\nGagal menghubungi server.\nDetail: ${error.message}\nCoba beberapa saat lagi.`,
-          isUser: false,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
-
+      console.error('❌ Chat error:', error.message);
+      
+      const errorMessage: Message = {
+        id: Date.now(),
+        text: `❌ **Gagal terhubung ke server**\n\nSilakan coba beberapa saat lagi. Pastikan koneksi internet Anda stabil.`,
+        isUser: false,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
       setConnectionStatus('offline');
-      testAPIConnection();
+      
+      // Auto-retry connection
+      setTimeout(() => testAPIConnection(), 2000);
     } finally {
       setIsTyping(false);
     }
@@ -270,7 +290,7 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
       setMessages([
         {
           id: 1,
-          text: '👋 **Halo! Saya AI Health Assistant QHealth**\n\nSaya siap membantu Anda.',
+          text: '👋 **Halo! Saya AI Health Assistant QHealth**\n\nSaya siap membantu Anda dengan berbagai topik kesehatan.\n\n💡 **Mohon pastikan:**\n1. Anda sudah login\n2. Koneksi internet stabil\n3. Server API aktif\n\nTanyakan apapun tentang kesehatan!',
           isUser: false,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
@@ -278,13 +298,13 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
       setMessage('');
       setIsTyping(false);
       setConnectionStatus('connecting');
-    }, 300);
+    }, 150);
   };
 
   const renderBlurBackground = (children: React.ReactNode, extraStyle?: any) => {
     if (Platform.OS === 'ios') {
       return (
-        <BlurView intensity={28} tint="light" style={[styles.blurBackground, extraStyle]}>
+        <BlurView intensity={32} tint="light" style={[styles.blurBackground, extraStyle]}>
           {children}
         </BlurView>
       );
@@ -299,7 +319,13 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+    <Modal 
+      visible={visible} 
+      transparent 
+      animationType="none" 
+      statusBarTranslucent
+      hardwareAccelerated
+    >
       {/* Backdrop */}
       <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
         <TouchableOpacity
@@ -312,6 +338,7 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalWrapper}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <Animated.View
           style={[
@@ -334,11 +361,13 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
                     connectionStatus === 'connecting' && styles.botAvatarConnecting,
                   ]}
                 >
-                  <Ionicons name="sparkles" size={22} color="#fff" />
+                  <Ionicons name="sparkles" size={20} color="#fff" />
                 </View>
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.headerTitle}>AI Health Assistant</Text>
+                <View style={styles.headerInfo}>
+                  <Text style={styles.headerTitle} numberOfLines={1}>
+                    AI Health Assistant
+                  </Text>
 
                   <View style={styles.statusRow}>
                     <View
@@ -358,16 +387,20 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
                       ]}
                       numberOfLines={1}
                     >
-                      {connectionStatus === 'online' && 'Terhubung ke API'}
-                      {connectionStatus === 'offline' && 'Koneksi terputus'}
-                      {connectionStatus === 'connecting' && 'Menghubungkan...'}
+                      {connectionStatus === 'online' && '• Terhubung ke API'}
+                      {connectionStatus === 'offline' && '• Koneksi terputus'}
+                      {connectionStatus === 'connecting' && '• Menghubungkan...'}
                     </Text>
                   </View>
                 </View>
               </View>
 
-              <TouchableOpacity onPress={handleClose} style={styles.closeBtn} hitSlop={10}>
-                <Ionicons name="close-circle" size={28} color="#9CA3AF" />
+              <TouchableOpacity 
+                onPress={handleClose} 
+                style={styles.closeBtn}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close-circle" size={26} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
           )}
@@ -378,7 +411,10 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
             style={styles.messagesContainer}
             contentContainerStyle={styles.messagesContent}
             showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={() => {
+              setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 50);
+            }}
           >
             {messages.map(msg => (
               <View
@@ -390,11 +426,16 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
               >
                 {!msg.isUser && (
                   <View style={styles.botAvatarSmall}>
-                    <Ionicons name="sparkles" size={14} color="#fff" />
+                    <Ionicons name="sparkles" size={12} color="#fff" />
                   </View>
                 )}
 
-                <View style={[styles.bubble, msg.isUser ? styles.userBubble : styles.botBubble]}>
+                <View 
+                  style={[
+                    styles.bubble, 
+                    msg.isUser ? styles.userBubble : styles.botBubble,
+                  ]}
+                >
                   <Text style={[styles.messageText, msg.isUser ? styles.userText : styles.botText]}>
                     {msg.text}
                   </Text>
@@ -408,11 +449,13 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
             {isTyping && (
               <View style={[styles.messageRow, styles.botRow]}>
                 <View style={styles.botAvatarSmall}>
-                  <Ionicons name="sparkles" size={14} color="#fff" />
+                  <Ionicons name="sparkles" size={12} color="#fff" />
                 </View>
                 <View style={[styles.bubble, styles.botBubble, styles.typingBubble]}>
                   <ActivityIndicator size="small" color="#10B981" />
-                  {apiLoading && <Text style={styles.typingText}>Memproses...</Text>}
+                  <Text style={styles.typingText}>
+                    {apiLoading ? 'Memproses permintaan...' : 'Mengetik...'}
+                  </Text>
                 </View>
               </View>
             )}
@@ -421,9 +464,15 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
           {/* INPUT */}
           {renderBlurBackground(
             <View style={styles.inputArea}>
-              <View style={styles.inputWrapper}>
+              <View style={[
+                styles.inputWrapper,
+                connectionStatus !== 'online' && styles.inputWrapperDisabled
+              ]}>
                 <TextInput
-                  style={[styles.textInput, connectionStatus !== 'online' && styles.textInputDisabled]}
+                  style={[
+                    styles.textInput, 
+                    connectionStatus !== 'online' && styles.textInputDisabled,
+                  ]}
                   value={message}
                   onChangeText={setMessage}
                   placeholder={
@@ -431,10 +480,16 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
                       ? 'Tanyakan tentang kesehatan...'
                       : connectionStatus === 'connecting'
                       ? 'Menghubungkan ke server...'
-                      : 'Koneksi terputus'
+                      : 'Koneksi terputus - periksa internet'
                   }
                   placeholderTextColor="#9CA3AF"
                   multiline
+                  maxLength={500}
+                  textAlignVertical="center"
+                  editable={connectionStatus === 'online'}
+                  onSubmitEditing={sendMessage}
+                  blurOnSubmit={false}
+                  returnKeyType="send"
                 />
 
                 <TouchableOpacity
@@ -445,19 +500,35 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
                     (!message.trim() || isTyping || connectionStatus !== 'online') &&
                       styles.sendButtonDisabled,
                   ]}
-                  activeOpacity={0.85}
+                  activeOpacity={0.9}
+                  hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                 >
-                  <Ionicons name="send" size={18} color="#fff" />
+                  <Ionicons 
+                    name="send" 
+                    size={16} 
+                    color={
+                      (!message.trim() || isTyping || connectionStatus !== 'online') 
+                        ? "#9CA3AF" 
+                        : "#fff"
+                    } 
+                  />
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.inputHint} numberOfLines={1}>
-                {connectionStatus === 'online'
-                  ? `🟢 Terhubung ke ${API_BASE_URL}`
-                  : connectionStatus === 'connecting'
-                  ? '🟡 Menghubungkan...'
-                  : '🔴 Koneksi terputus'}
-              </Text>
+              <View style={styles.inputFooter}>
+                <Text style={styles.inputHint} numberOfLines={1}>
+                  {connectionStatus === 'online'
+                    ? `🟢 Terhubung • Enter untuk kirim`
+                    : connectionStatus === 'connecting'
+                    ? '🟡 Menghubungkan...'
+                    : '🔴 Periksa koneksi internet'}
+                </Text>
+                {message.length > 0 && (
+                  <Text style={styles.charCount}>
+                    {message.length}/500
+                  </Text>
+                )}
+              </View>
             </View>,
             styles.inputBlur
           )}
@@ -470,60 +541,59 @@ export default function AIChatModal({ visible, onClose }: AIChatModalProps) {
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
-
   modalWrapper: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 18,
+    padding: 16,
   },
-
   modalContainer: {
-    width: Math.min(SCREEN_WIDTH * 0.92, 520),
-    maxHeight: SCREEN_HEIGHT * 0.85,
+    width: Math.min(SCREEN_WIDTH * 0.9, 500),
+    maxHeight: SCREEN_HEIGHT * 0.82,
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
+    borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.16,
-    shadowRadius: 30,
-    elevation: 20,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 16,
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.10)',
+    borderColor: 'rgba(16,185,129,0.15)',
   },
-
   blurBackground: {
     overflow: 'hidden',
   },
   androidBlur: {
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: 'rgba(255,255,255,0.98)',
   },
-
+  // HEADER
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 14,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(16,185,129,0.10)',
+    borderBottomColor: 'rgba(16,185,129,0.1)',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 60,
   },
-
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     flex: 1,
   },
-
+  headerInfo: {
+    flex: 1,
+  },
   botAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     backgroundColor: '#6B7280',
     justifyContent: 'center',
     alignItems: 'center',
@@ -531,152 +601,188 @@ const styles = StyleSheet.create({
   botAvatarOnline: { backgroundColor: '#10B981' },
   botAvatarOffline: { backgroundColor: '#EF4444' },
   botAvatarConnecting: { backgroundColor: '#F59E0B' },
-
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#111827',
-    letterSpacing: -0.3,
+    marginBottom: 2,
   },
-
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: 6,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#9CA3AF',
   },
   dotOnline: { backgroundColor: '#10B981' },
   dotOffline: { backgroundColor: '#EF4444' },
   dotConnecting: { backgroundColor: '#F59E0B' },
-
-  headerSubtitle: { fontSize: 12, fontWeight: '700' },
+  headerSubtitle: { 
+    fontSize: 11, 
+    fontWeight: '600',
+  },
   statusOnline: { color: '#059669' },
   statusOffline: { color: '#DC2626' },
   statusConnecting: { color: '#B45309' },
-
   closeBtn: {
-    paddingLeft: 10,
-    paddingVertical: 4,
+    paddingLeft: 8,
   },
-
+  // MESSAGES
   messagesContainer: {
-    flexGrow: 0,
-    maxHeight: SCREEN_HEIGHT * 0.55,
+    flexGrow: 1,
+    maxHeight: SCREEN_HEIGHT * 0.6,
+    minHeight: 200,
   },
   messagesContent: {
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
-
   messageRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: 12,
-    maxWidth: '92%',
+    alignItems: 'flex-start',
+    marginBottom: 10,
   },
-  botRow: { alignSelf: 'flex-start' },
-  userRow: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
-
+  botRow: { 
+    alignSelf: 'flex-start' 
+  },
+  userRow: { 
+    alignSelf: 'flex-end', 
+    flexDirection: 'row-reverse' 
+  },
   botAvatarSmall: {
-    width: 30,
-    height: 30,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 10,
     backgroundColor: '#10B981',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 2,
     marginRight: 8,
   },
-
   bubble: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 18,
     borderWidth: 1,
+    maxWidth: '85%',
   },
   botBubble: {
     backgroundColor: '#F8FAFC',
-    borderColor: 'rgba(17,24,39,0.06)',
+    borderColor: 'rgba(17,24,39,0.08)',
   },
   userBubble: {
     backgroundColor: '#10B981',
-    borderColor: 'rgba(16,185,129,0.35)',
+    borderColor: 'rgba(16,185,129,0.3)',
   },
-
-  messageText: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
-  botText: { color: '#111827' },
+  messageText: { 
+    fontSize: 14.5, 
+    lineHeight: 20, 
+    fontWeight: '500',
+  },
+  botText: { color: '#1F2937' },
   userText: { color: '#FFFFFF' },
-
   timeText: {
-    marginTop: 6,
-    fontSize: 11,
-    opacity: 0.65,
+    marginTop: 4,
+    fontSize: 10,
+    opacity: 0.7,
     color: '#6B7280',
-    fontWeight: '700',
+    fontWeight: '600',
+    alignSelf: 'flex-end',
   },
-  timeTextUser: { color: 'rgba(255,255,255,0.85)' },
-
-  typingBubble: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  typingText: { fontSize: 12, color: '#6B7280', fontWeight: '700' },
-
+  timeTextUser: { color: 'rgba(255,255,255,0.9)' },
+  typingBubble: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  typingText: { 
+    fontSize: 13, 
+    color: '#6B7280', 
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  // INPUT
   inputBlur: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(16,185,129,0.10)',
+    borderTopColor: 'rgba(16,185,129,0.1)',
   },
   inputArea: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 14,
+    paddingBottom: 16,
   },
   inputWrapper: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    backgroundColor: 'rgba(248,250,252,0.9)',
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'rgba(16,185,129,0.18)',
-    paddingHorizontal: 10,
+    alignItems: 'center',
+    backgroundColor: 'rgba(248,250,252,0.95)',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(16,185,129,0.2)',
+    paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 10,
+    minHeight: 50,
+  },
+  inputWrapperDisabled: {
+    backgroundColor: 'rgba(248,250,252,0.7)',
+    borderColor: 'rgba(156,163,175,0.3)',
   },
   textInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14.5,
     color: '#111827',
-    fontWeight: '600',
-    maxHeight: 110,
-    paddingTop: 6,
-    paddingBottom: 6,
+    fontWeight: '500',
+    maxHeight: 100,
+    minHeight: 20,
+    paddingTop: Platform.OS === 'ios' ? 8 : 6,
+    paddingBottom: Platform.OS === 'ios' ? 8 : 6,
+    paddingHorizontal: 0,
   },
-  textInputDisabled: { color: '#9CA3AF' },
-
+  textInputDisabled: { 
+    color: '#9CA3AF',
+  },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#10B981',
     shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  sendButtonDisabled: { backgroundColor: '#D1D5DB', shadowColor: '#9CA3AF' },
-
+  sendButtonDisabled: { 
+    backgroundColor: 'rgba(209,213,219,0.8)',
+    shadowColor: 'transparent',
+  },
+  inputFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 6,
+    paddingHorizontal: 2,
+  },
   inputHint: {
-    marginTop: 8,
     fontSize: 11,
-    textAlign: 'center',
     color: '#6B7280',
-    fontWeight: '700',
+    fontWeight: '600',
     opacity: 0.8,
+    flex: 1,
+  },
+  charCount: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });

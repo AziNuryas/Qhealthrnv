@@ -1,14 +1,12 @@
-import { getProfile, updateProfile } from '@/lib/api';
+import { updateProfile } from '@/lib/api';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Animated,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
@@ -21,81 +19,57 @@ import {
 
 export default function EditProfilScreen() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Form state
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    gender: '',
     phone: '',
+    gender: '',
   });
 
-  // Animations
+  // Animasi
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-
-  const fetchProfile = async () => {
-    try {
-      const token = await AsyncStorage.getItem('auth_token');
-      if (!token) {
-        Alert.alert('Error', 'Sesi telah berakhir. Silakan login kembali.');
-        router.replace('/login');
-        return;
-      }
-
-      const profileData = await getProfile(token);
-      
-      setFormData({
-        name: profileData.name || '',
-        email: profileData.email || '',
-        gender: profileData.gender || '',
-        phone: profileData.phone || '',
-      });
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      Alert.alert('Error', 'Gagal memuat data profil');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    fetchProfile();
+    // Load existing profile data
+    loadProfileData();
 
-    // Start animations
+    // Animasi masuk
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 400,
         useNativeDriver: true,
       }),
-      Animated.timing(slideAnim, {
+      Animated.spring(slideAnim, {
         toValue: 0,
-        duration: 400,
+        tension: 50,
+        friction: 8,
         useNativeDriver: true,
       }),
     ]).start();
   }, []);
 
+  const loadProfileData = async () => {
+    // Ini contoh data, nanti bisa diambil dari API
+    setFormData({
+      name: 'John Doe',
+      email: 'john@example.com',
+      phone: '081234567890',
+      gender: 'male',
+    });
+  };
+
   const handleUpdate = async () => {
-    // Validasi
     if (!formData.name.trim()) {
       Alert.alert('Error', 'Nama tidak boleh kosong');
       return;
     }
 
-    if (!formData.email.trim()) {
-      Alert.alert('Error', 'Email tidak boleh kosong');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      Alert.alert('Error', 'Format email tidak valid');
-      return;
-    }
-
-    setSaving(true);
+    setLoading(true);
     try {
       const token = await AsyncStorage.getItem('auth_token');
       if (!token) {
@@ -104,136 +78,82 @@ export default function EditProfilScreen() {
         return;
       }
 
-      // Kirim data ke API
-      const updateData = {
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        gender: formData.gender.trim() || undefined,
-        phone: formData.phone.trim() || undefined,
-      };
+      await updateProfile(token, {
+        name: formData.name,
+        phone: formData.phone,
+        gender: formData.gender,
+      });
 
-      await updateProfile(token, updateData);
-      
-      Alert.alert(
-        'Sukses',
-        'Profil berhasil diperbarui',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back()
-          }
-        ]
-      );
+      Alert.alert('Sukses', 'Profil berhasil diperbarui');
+      router.back();
     } catch (error: any) {
-      console.error('Update error:', error);
       Alert.alert('Error', error.message || 'Gagal memperbarui profil');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    Alert.alert(
-      'Batal Edit',
-      'Perubahan yang belum disimpan akan hilang. Lanjutkan?',
-      [
-        { text: 'Lanjut Edit', style: 'cancel' },
-        { text: 'Ya, Batalkan', onPress: () => router.back() }
-      ]
-    );
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-        <ActivityIndicator size="large" color="#10B981" />
-        <Text style={styles.loadingText}>Memuat data...</Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <Animated.View 
+      style={[
+        styles.container,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }
+      ]}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor="#F0FDF4" />
       
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#F0FDF4', '#DCFCE7']}
+        style={styles.backgroundGradient}
+      />
+
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <Animated.View 
-            style={[
-              styles.header,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
           >
-            <View style={styles.headerContent}>
-              <TouchableOpacity 
-                style={styles.backButton}
-                onPress={handleCancel}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="arrow-back" size={24} color="#374151" />
-              </TouchableOpacity>
-              
-              {/* Logo dan Title di tengah */}
-              <View style={styles.headerCenter}>
-                <View style={styles.logoCircle}>
-                  <Ionicons name="create-outline" size={20} color="#10B981" />
-                </View>
-                <Text style={styles.headerTitle}>Edit Profil</Text>
-              </View>
-              
-              {/* Empty view untuk balance layout */}
-              <View style={styles.emptySpace} />
+            <Ionicons name="arrow-back" size={24} color="#065F46" />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Edit Profil</Text>
+          
+          <View style={styles.headerPlaceholder} />
+        </View>
+
+        {/* Form Section */}
+        <View style={styles.formSection}>
+          {/* Avatar */}
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <Ionicons name="person" size={40} color="#10B981" />
             </View>
-          </Animated.View>
+            <TouchableOpacity style={styles.changePhotoButton}>
+              <Text style={styles.changePhotoText}>Ganti Foto</Text>
+            </TouchableOpacity>
+          </View>
 
-          {/* Info Card */}
-          <Animated.View
-            style={[
-              styles.infoCard,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
-          >
-            <Ionicons name="information-circle-outline" size={20} color="#10B981" />
-            <Text style={styles.infoText}>
-              Pastikan informasi yang Anda berikan akurat dan valid
-            </Text>
-          </Animated.View>
-
-          {/* Form Card */}
-          <Animated.View
-            style={[
-              styles.formCard,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
-          >
+          {/* Form Fields */}
+          <View style={styles.formCard}>
             {/* Nama */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nama Lengkap</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="person-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+                <Ionicons name="person-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
+                  placeholder="Masukkan nama lengkap"
                   value={formData.name}
                   onChangeText={(text) => setFormData({...formData, name: text})}
-                  placeholder="Masukkan nama lengkap"
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
@@ -243,15 +163,29 @@ export default function EditProfilScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+                <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.input, styles.disabledInput]}
+                  value={formData.email}
+                  editable={false}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+              <Text style={styles.helperText}>Email tidak dapat diubah</Text>
+            </View>
+
+            {/* Nomor Telepon */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nomor Telepon</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons name="call-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  value={formData.email}
-                  onChangeText={(text) => setFormData({...formData, email: text})}
-                  placeholder="Masukkan email"
+                  placeholder="Masukkan nomor telepon"
+                  value={formData.phone}
+                  onChangeText={(text) => setFormData({...formData, phone: text})}
+                  keyboardType="phone-pad"
                   placeholderTextColor="#9CA3AF"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
                 />
               </View>
             </View>
@@ -260,207 +194,165 @@ export default function EditProfilScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Jenis Kelamin</Text>
               <View style={styles.genderContainer}>
-                {[
-                  { value: 'male', label: 'Laki-laki', icon: 'male-outline' },
-                  { value: 'female', label: 'Perempuan', icon: 'female-outline' }
-                ].map((gender) => (
-                  <TouchableOpacity
-                    key={gender.value}
-                    style={[
-                      styles.genderOption,
-                      formData.gender === gender.value && styles.genderOptionSelected
-                    ]}
-                    onPress={() => setFormData({...formData, gender: gender.value})}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={gender.icon as any}
-                      size={20}
-                      color={formData.gender === gender.value ? '#FFFFFF' : '#6B7280'}
-                    />
-                    <Text style={[
-                      styles.genderText,
-                      formData.gender === gender.value && styles.genderTextSelected
-                    ]}>
-                      {gender.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <TouchableOpacity
+                  style={[
+                    styles.genderButton,
+                    formData.gender === 'male' && styles.genderButtonActive
+                  ]}
+                  onPress={() => setFormData({...formData, gender: 'male'})}
+                >
+                  <Ionicons 
+                    name="male" 
+                    size={20} 
+                    color={formData.gender === 'male' ? '#FFFFFF' : '#6B7280'} 
+                  />
+                  <Text style={[
+                    styles.genderText,
+                    formData.gender === 'male' && styles.genderTextActive
+                  ]}>Laki-laki</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.genderButton,
+                    formData.gender === 'female' && styles.genderButtonActive
+                  ]}
+                  onPress={() => setFormData({...formData, gender: 'female'})}
+                >
+                  <Ionicons 
+                    name="female" 
+                    size={20} 
+                    color={formData.gender === 'female' ? '#FFFFFF' : '#6B7280'} 
+                  />
+                  <Text style={[
+                    styles.genderText,
+                    formData.gender === 'female' && styles.genderTextActive
+                  ]}>Perempuan</Text>
+                </TouchableOpacity>
               </View>
             </View>
+          </View>
 
-            {/* Phone */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Nomor Telepon</Text>
-              <View style={styles.inputContainer}>
-                <Ionicons name="call-outline" size={20} color="#6B7280" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={formData.phone}
-                  onChangeText={(text) => setFormData({...formData, phone: text})}
-                  placeholder="Masukkan nomor telepon"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="phone-pad"
-                />
-              </View>
-              <Text style={styles.hintText}>Opsional</Text>
-            </View>
-          </Animated.View>
-
-          {/* Warning Card */}
-          <Animated.View
-            style={[
-              styles.warningCard,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
-          >
-            <Ionicons name="warning-outline" size={20} color="#F59E0B" />
-            <Text style={styles.warningText}>
-              Jika Anda mengubah email, Anda perlu verifikasi email baru sebelum bisa login kembali.
-            </Text>
-          </Animated.View>
-
-          {/* Tombol Simpan DI BAWAH */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity 
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
               style={styles.cancelButton}
-              onPress={handleCancel}
-              activeOpacity={0.7}
+              onPress={() => router.back()}
             >
               <Text style={styles.cancelButtonText}>Batal</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.saveButton}
               onPress={handleUpdate}
-              disabled={saving}
-              activeOpacity={0.7}
+              disabled={loading}
             >
-              {saving ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.saveButtonText}>Simpan Perubahan</Text>
-              )}
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                style={styles.saveButtonGradient}
+              >
+                <Text style={styles.saveButtonText}>
+                  {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
+        </View>
 
-          {/* Spacer untuk menghindari nabrak navbar */}
-          <View style={{ height: Platform.OS === 'ios' ? 40 : 30 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+        {/* Spacer */}
+        <View style={{ height: Platform.OS === 'ios' ? 80 : 60 }} />
+      </ScrollView>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0FDF4',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  loadingText: { 
-    marginTop: 12, 
-    fontSize: 16, 
-    color: '#374151',
-    fontWeight: '500'
-  },
-  keyboardView: {
-    flex: 1,
+  backgroundGradient: {
+    ...StyleSheet.absoluteFillObject,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: Platform.OS === 'ios' ? 44 : 30,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
     paddingBottom: 20,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
-  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginBottom: 20,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-  },
-  headerCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    justifyContent: 'center',
-    zIndex: -1,
-  },
-  logoCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F0FDF4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#D1FAE5',
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '800',
+    color: '#065F46',
+    letterSpacing: -0.5,
   },
-  emptySpace: {
+  headerPlaceholder: {
     width: 40,
   },
-  infoCard: {
-    flexDirection: 'row',
+  formSection: {
+    paddingHorizontal: 20,
+  },
+  avatarContainer: {
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    padding: 16,
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderWidth: 1,
+    marginBottom: 30,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 4,
     borderColor: '#D1FAE5',
   },
-  infoText: {
-    flex: 1,
+  changePhotoButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 12,
+  },
+  changePhotoText: {
+    color: '#10B981',
     fontSize: 14,
-    color: '#065F46',
-    fontWeight: '500',
-    marginLeft: 12,
+    fontWeight: '600',
   },
   formCard: {
     backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 3,
   },
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
@@ -471,88 +363,67 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
   },
   inputIcon: {
     marginRight: 12,
   },
   input: {
     flex: 1,
-    height: 48,
+    paddingVertical: 14,
     fontSize: 16,
-    color: '#1F2937',
+    color: '#111827',
   },
-  hintText: {
+  disabledInput: {
+    color: '#6B7280',
+  },
+  helperText: {
     fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 4,
+    color: '#6B7280',
+    marginTop: 6,
   },
   genderContainer: {
     flexDirection: 'row',
     gap: 12,
   },
-  genderOption: {
+  genderButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 12,
-    paddingHorizontal: 16,
     borderRadius: 12,
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
   },
-  genderOptionSelected: {
+  genderButtonActive: {
     backgroundColor: '#10B981',
     borderColor: '#10B981',
   },
   genderText: {
     fontSize: 14,
+    fontWeight: '600',
     color: '#6B7280',
-    fontWeight: '500',
   },
-  genderTextSelected: {
+  genderTextActive: {
     color: '#FFFFFF',
   },
-  warningCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#FFFBEB',
-    padding: 16,
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#92400E',
-    marginLeft: 12,
-    lineHeight: 20,
-  },
-  buttonContainer: {
+  actionButtons: {
     flexDirection: 'row',
     gap: 12,
-    marginHorizontal: 16,
-    marginBottom: 20,
   },
   cancelButton: {
     flex: 1,
-    height: 52,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: 16,
     backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
@@ -561,18 +432,17 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 2,
-    height: 52,
-    borderRadius: 14,
-    justifyContent: 'center',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  saveButtonGradient: {
+    paddingVertical: 16,
     alignItems: 'center',
-    backgroundColor: '#10B981',
-    borderWidth: 1,
-    borderColor: '#059669',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   saveButtonText: {
     fontSize: 16,

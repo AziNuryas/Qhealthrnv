@@ -34,19 +34,19 @@ export default function ProfilScreen() {
     created_at: string;
   } | null>(null);
 
-  // Animations
+  // Animasi sederhana
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
   
-  // Menu animations
-  const menuScales = useRef(Array(6).fill(0).map(() => new Animated.Value(1))).current;
+  // Animasi untuk menu items (tanpa bergerak berlebihan)
+  const menuScales = useRef(Array(5).fill(0).map(() => new Animated.Value(1))).current;
 
   const animateEntrance = useCallback(() => {
-    // Reset semua animasi
+    // Reset animasi
     fadeAnim.setValue(0);
-    slideAnim.setValue(20);
+    scaleAnim.setValue(0.95);
 
-    // Main entrance animation
+    // Animasi masuk sederhana
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -54,23 +54,20 @@ export default function ProfilScreen() {
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
+      Animated.timing(scaleAnim, {
+        toValue: 1,
         duration: 400,
         useNativeDriver: true,
         easing: Easing.out(Easing.cubic),
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, scaleAnim]);
 
   const fetchProfile = async () => {
     try {
-      console.log('🔄 Fetching profile...');
       const token = await AsyncStorage.getItem('auth_token');
-      console.log('🔑 Token exists:', !!token);
       
       if (!token) {
-        console.log('❌ No token found');
         setLoading(false);
         Alert.alert('Belum Login', 'Silakan login terlebih dahulu.', [
           { text: 'OK', onPress: () => router.replace('/login') },
@@ -78,9 +75,7 @@ export default function ProfilScreen() {
         return;
       }
 
-      console.log('📡 Calling getProfile API...');
       const profileData = await getProfile(token);
-      console.log('✅ Profile API Response:', profileData);
 
       // Format tanggal join
       const joinDate = new Date(profileData.created_at).toLocaleDateString('id-ID', {
@@ -93,11 +88,10 @@ export default function ProfilScreen() {
         email: profileData.email || '',
         gender: profileData.gender,
         phone: profileData.phone,
-        created_at: `Member sejak ${joinDate}`,
+        created_at: `Bergabung ${joinDate}`,
       });
     } catch (error: any) {
       console.error('❌ Profil error:', error.message || error);
-      console.error('❌ Full error:', error);
       Alert.alert('Error', 'Gagal memuat profil. Silakan login ulang.');
       await AsyncStorage.removeItem('auth_token');
       router.replace('/login');
@@ -111,10 +105,9 @@ export default function ProfilScreen() {
     setRefreshing(true);
     setTimeout(() => {
       setRefreshing(false);
-      animateEntrance();
       fetchProfile();
     }, 1000);
-  }, [animateEntrance]);
+  }, []);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -144,89 +137,84 @@ export default function ProfilScreen() {
   };
 
   useEffect(() => {
-    console.log('🎯 ProfilScreen mounted');
-    
     fetchProfile();
-
-    // Start animations with delay
     const timer = setTimeout(() => {
       animateEntrance();
     }, 200);
-
     return () => clearTimeout(timer);
   }, []);
 
   useFocusEffect(
     React.useCallback(() => {
-      console.log('👁️ ProfilScreen focused, refreshing...');
       fetchProfile();
     }, [])
   );
 
-  // Statistik user
+  // Data statistik user
   const userStats = [
     { 
       label: 'Diskusi', 
-      value: '24',
-      icon: 'chatbubbles-outline' as const,
-      color: '#EF4444'
+      value: '12',
+      icon: 'chatbubbles' as const,
+      color: '#10B981',
+      bgColor: '#D1FAE5'
     },
     { 
       label: 'Jawaban', 
-      value: '18',
-      icon: 'checkmark-circle-outline' as const,
-      color: '#10B981'
+      value: '8',
+      icon: 'checkmark-circle' as const,
+      color: '#3B82F6',
+      bgColor: '#DBEAFE'
     },
     { 
-      label: 'Membantu', 
-      value: '32',
-      icon: 'heart-outline' as const,
-      color: '#3B82F6'
+      label: 'Aktif', 
+      value: '24',
+      icon: 'time' as const,
+      color: '#8B5CF6',
+      bgColor: '#EDE9FE'
     },
   ];
 
-  // Menu items dengan background PUTIH
+  // Menu items
   const menuItems = [
     { 
       id: 1,
-      icon: 'person-outline' as const, 
+      icon: 'person' as const, 
       label: 'Edit Profil',
-      iconColor: '#10B981',
+      color: '#10B981',
+      bgColor: '#D1FAE5',
       action: () => router.push('/edit-profil')
     },
     { 
       id: 2,
-      icon: 'notifications-outline' as const, 
-      label: 'Notifikasi',
-      iconColor: '#3B82F6',
-      action: () => router.push('/notifikasi')
+      icon: 'lock-closed' as const, 
+      label: 'Keamanan',
+      color: '#3B82F6',
+      bgColor: '#DBEAFE',
+      action: () => router.push('/keamanan')
     },
     { 
       id: 3,
-      icon: 'lock-closed-outline' as const, 
-      label: 'Privasi & Keamanan',
-      iconColor: '#8B5CF6',
-      action: () => router.push('/privasi')
-    },
-    { 
-      id: 4,
-      icon: 'help-circle-outline' as const, 
+      icon: 'help-circle' as const, 
       label: 'Bantuan',
-      iconColor: '#F59E0B',
+      color: '#F59E0B',
+      bgColor: '#FEF3C7',
       action: () => router.push('/bantuan')
     },
     { 
-      id: 5,
-      icon: 'information-circle-outline' as const, 
-      label: 'Tentang Aplikasi',
-      iconColor: '#059669',
+      id: 4,
+      icon: 'information-circle' as const, 
+      label: 'Tentang',
+      color: '#8B5CF6',
+      bgColor: '#EDE9FE',
       action: () => router.push('/tentang')
     },
     { 
-      id: 6,
-      icon: 'log-out-outline' as const, 
+      id: 5,
+      icon: 'log-out' as const, 
       label: 'Keluar',
-      iconColor: '#EF4444',
+      color: '#EF4444',
+      bgColor: '#FEE2E2',
       action: () => handleLogout()
     },
   ];
@@ -236,14 +224,14 @@ export default function ProfilScreen() {
     
     Animated.sequence([
       Animated.timing(scaleValue, {
-        toValue: 0.98,
-        duration: 60,
+        toValue: 0.95,
+        duration: 100,
         useNativeDriver: true,
       }),
       Animated.spring(scaleValue, {
         toValue: 1,
-        tension: 350,
-        friction: 8,
+        tension: 200,
+        friction: 5,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -266,7 +254,7 @@ export default function ProfilScreen() {
       <View style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={60} color="#6B7280" />
+          <Ionicons name="alert-circle" size={60} color="#6B7280" />
           <Text style={styles.errorText}>Tidak dapat memuat profil</Text>
           <TouchableOpacity 
             style={styles.retryButton}
@@ -280,9 +268,25 @@ export default function ProfilScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <Animated.View 
+      style={[
+        styles.container,
+        {
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }]
+        }
+      ]}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor="#F0FDF4" />
       
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#F0FDF4', '#DCFCE7', '#BBF7D0']}
+        style={styles.backgroundGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -293,51 +297,31 @@ export default function ProfilScreen() {
             onRefresh={onRefresh}
             tintColor="#10B981"
             colors={['#10B981']}
+            progressBackgroundColor="rgba(255, 255, 255, 0.8)"
           />
         }
       >
         {/* Header */}
-        <Animated.View 
-          style={[
-            styles.header,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          <View style={styles.headerContent}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={24} color="#374151" />
-            </TouchableOpacity>
-            
-            {/* Logo dan Title di samping kiri */}
-            <View style={styles.headerLeft}>
-              <View style={styles.logoCircle}>
-                <Ionicons name="person" size={20} color="#10B981" />
-              </View>
-              <Text style={styles.headerTitle}>Profil Saya</Text>
-            </View>
-            
-            {/* Empty view untuk balance layout */}
-            <View style={styles.emptySpace} />
-          </View>
-        </Animated.View>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#065F46" />
+          </TouchableOpacity>
+          
+          <Text style={styles.headerTitle}>Profil Saya</Text>
+          
+          <TouchableOpacity 
+            style={styles.settingsButton}
+            onPress={() => router.push('/pengaturan')}
+          >
+            <Ionicons name="settings-outline" size={24} color="#065F46" />
+          </TouchableOpacity>
+        </View>
 
         {/* Profile Card */}
-        <Animated.View
-          style={[
-            styles.profileCard,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
+        <View style={styles.profileCard}>
           <LinearGradient
             colors={['#10B981', '#059669']}
             style={styles.profileGradient}
@@ -345,7 +329,7 @@ export default function ProfilScreen() {
             end={{ x: 1, y: 1 }}
           >
             <View style={styles.profileContent}>
-              {/* Avatar */}
+              {/* Avatar - TIDAK BERGERAK */}
               <View style={styles.avatarContainer}>
                 <View style={styles.avatarCircle}>
                   <Ionicons name="person" size={36} color="#10B981" />
@@ -371,7 +355,11 @@ export default function ProfilScreen() {
                   )}
                   {user.gender && (
                     <View style={styles.detailItem}>
-                      <Ionicons name="person-outline" size={14} color="rgba(255, 255, 255, 0.9)" />
+                      <Ionicons 
+                        name={user.gender === 'male' ? 'male' : 'female'} 
+                        size={14} 
+                        color="rgba(255, 255, 255, 0.9)" 
+                      />
                       <Text style={styles.detailText}>
                         {user.gender === 'male' ? 'Laki-laki' : 
                          user.gender === 'female' ? 'Perempuan' : 'Lainnya'}
@@ -382,37 +370,33 @@ export default function ProfilScreen() {
               </View>
             </View>
           </LinearGradient>
-        </Animated.View>
+        </View>
 
-        {/* Stats Section */}
-        <Animated.View
-          style={[
-            styles.statsSection,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          <Text style={styles.statsTitle}>Aktivitas Saya</Text>
-          
+        {/* Aktivitas Saya Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Aktivitas Saya</Text>
+          </View>
+
           <View style={styles.statsContainer}>
             {userStats.map((stat) => (
               <View key={stat.label} style={styles.statItem}>
-                <View style={[styles.statIcon, { backgroundColor: stat.color + '15' }]}>
-                  <Ionicons name={stat.icon} size={20} color={stat.color} />
+                <View style={[styles.statIcon, { backgroundColor: stat.bgColor }]}>
+                  <Ionicons name={stat.icon} size={22} color={stat.color} />
                 </View>
                 <Text style={styles.statValue}>{stat.value}</Text>
                 <Text style={styles.statLabel}>{stat.label}</Text>
               </View>
             ))}
           </View>
-        </Animated.View>
+        </View>
 
-        {/* Menu Section - BACKGROUND PUTIH */}
-        <View style={styles.menuSection}>
-          <Text style={styles.menuTitle}>Pengaturan</Text>
-          
+        {/* Menu Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Menu</Text>
+          </View>
+
           <View style={styles.menuContainer}>
             {menuItems.map((item, index) => (
               <Animated.View
@@ -427,8 +411,8 @@ export default function ProfilScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.menuItemContent}>
-                    <View style={[styles.menuIcon, { backgroundColor: item.iconColor + '15' }]}>
-                      <Ionicons name={item.icon} size={22} color={item.iconColor} />
+                    <View style={[styles.menuIcon, { backgroundColor: item.bgColor }]}>
+                      <Ionicons name={item.icon} size={20} color={item.color} />
                     </View>
                     <Text style={styles.menuItemText}>{item.label}</Text>
                     <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
@@ -448,17 +432,20 @@ export default function ProfilScreen() {
           <Text style={styles.appVersion}>Versi 1.0.0</Text>
         </View>
 
-        {/* Spacer untuk menghindari nabrak navbar */}
+        {/* Spacer */}
         <View style={{ height: Platform.OS === 'ios' ? 80 : 60 }} />
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0FDF4',
+  },
+  backgroundGradient: {
+    ...StyleSheet.absoluteFillObject,
   },
   loadingContainer: {
     flex: 1,
@@ -502,63 +489,55 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: Platform.OS === 'ios' ? 44 : 30, // Padding untuk notif bar
-    paddingBottom: 20, // Padding untuk navbar
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingBottom: 20,
   },
+  
+  // Header
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 12,
-  },
-  logoCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F0FDF4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#D1FAE5',
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '800',
+    color: '#065F46',
+    letterSpacing: -0.5,
   },
-  emptySpace: {
-    width: 40, // Space untuk balance layout
-  },
-  profileCard: {
-    marginHorizontal: 16,
-    marginBottom: 20,
+  settingsButton: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Profile Card
+  profileCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
   },
   profileGradient: {
-    padding: 20,
+    padding: 24,
   },
   profileContent: {
     flexDirection: 'row',
@@ -566,43 +545,54 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: 16,
+    marginRight: 20,
   },
   avatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   verifiedBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 2,
+    borderRadius: 12,
+    padding: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   userInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
   userEmail: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.95)',
     marginBottom: 6,
     fontWeight: '500',
   },
   memberSince: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 12,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginBottom: 16,
     fontWeight: '500',
   },
   detailsRow: {
@@ -614,49 +604,59 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 12,
   },
   detailText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.95)',
     fontWeight: '500',
   },
-  statsSection: {
-    marginHorizontal: 16,
-    marginBottom: 20,
+
+  // Section Common
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
   },
-  statsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+  sectionHeader: {
     marginBottom: 16,
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#065F46',
+    letterSpacing: -0.4,
+  },
+
+  // Stats Section
   statsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
   },
   statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#111827',
   },
   statLabel: {
@@ -665,23 +665,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '500',
   },
-  menuSection: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginBottom: 20,
-  },
-  menuTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 16,
-  },
+
+  // Menu Section
   menuContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderRadius: 20,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
   menuItem: {
     backgroundColor: '#FFFFFF',
@@ -707,10 +701,12 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '500',
   },
+
+  // App Info
   appInfo: {
     alignItems: 'center',
     paddingVertical: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 30, // Extra padding untuk navbar
+    paddingBottom: Platform.OS === 'ios' ? 40 : 30,
   },
   appLogo: {
     width: 48,

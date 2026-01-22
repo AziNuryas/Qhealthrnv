@@ -1,11 +1,9 @@
-import { Stack } from 'expo-router';
-import { StatusBar } from 'react-native';
-import { View } from 'react-native';
-import DockNavigation from '../components/DockNavigation';
+import { Stack, usePathname } from 'expo-router';
 import { useState } from 'react';
-import BMIModal from '../components/BMIModal';
+import { StatusBar, View } from 'react-native';
 import AIChatModal from '../components/AIChatModal';
-import { usePathname } from 'expo-router';
+import BMIModal from '../components/BMIModal';
+import DockNavigation from '../components/DockNavigation';
 
 export default function RootLayout() {
   const [activeModal, setActiveModal] = useState<'bmi' | 'ai' | null>(null);
@@ -41,6 +39,8 @@ export default function RootLayout() {
           <Stack.Screen name="dashboard" />
           <Stack.Screen name="diskusi" />
           <Stack.Screen name="profil" />
+          <Stack.Screen name="pengaturan" options={{ headerShown: false }} />
+          <Stack.Screen name="keamanan" options={{ headerShown: false }} />
         </Stack>
 
         {/* Show Dock only on main app screens */}

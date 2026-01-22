@@ -3,15 +3,15 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
   Alert,
+  Animated,
   Linking,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Animated,
-  Platform,
 } from 'react-native';
 
 export default function TentangScreen() {

@@ -1,27 +1,41 @@
-import React, { useState, useRef } from 'react';
+import { loginUser } from '@/lib/api';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
-  ScrollView,
+  Dimensions,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  KeyboardAvoidingView,
-  Platform,
   TouchableWithoutFeedback,
-  Keyboard,
-  Dimensions,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loginUser } from '@/lib/api';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 
 const { height, width } = Dimensions.get('window');
+
+type ButtonProps = {
+  onPress?: () => void;
+  onClick?: () => void;
+  role?: 'button' | 'link' | 'none';
+  tabIndex?: number;
+  onKeyPress?: (e: any) => void;
+  accessibilityLabel?: string;
+  accessibilityRole?: 'button' | 'link' | 'none';
+  disabled?: boolean;
+  activeOpacity?: number;
+  style?: any;
+  hitSlop?: any;
+  children?: React.ReactNode;
+};
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,37 +51,82 @@ export default function LoginScreen() {
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
 
+  // Handler untuk web & mobile
+  const getButtonProps = (callback: () => void): ButtonProps => {
+    if (Platform.OS === 'web') {
+      return {
+        onClick: callback,
+        onPress: undefined,
+        role: 'button' as const,
+        tabIndex: 0,
+        onKeyPress: (e: any) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            callback();
+          }
+        },
+      };
+    }
+    return {
+      onPress: callback,
+    };
+  };
+
+  const handleLoginPress = () => {
+    console.log('🎯 Login button pressed');
+    handleLogin();
+  };
+
   const handleLogin = async () => {
-    if (!formData.email || !formData.password) {
+    console.log('🚀 Starting login process...');
+    
+    // Validation
+    if (!formData.email.trim() || !formData.password.trim()) {
       Alert.alert('Error', 'Harap isi email dan password');
       return;
     }
-    if (!formData.email.includes('@')) {
+    
+    if (!formData.email.includes('@') || !formData.email.includes('.')) {
       Alert.alert('Error', 'Format email tidak valid');
       return;
     }
 
     setLoading(true);
+    console.log('📡 Sending login request...');
+    
     try {
       const data = await loginUser({
-        email: formData.email,
-        password: formData.password,
+        email: formData.email.trim(),
+        password: formData.password.trim(),
       });
 
+      console.log('✅ Login response:', data);
+
       if (data.success && data.token) {
+        console.log('🔐 Token received, saving...');
         await AsyncStorage.setItem('auth_token', data.token);
-        router.replace('/dashboard');
+        
+        // Delay kecil untuk visual feedback
+        setTimeout(() => {
+          console.log('🔄 Navigating to dashboard...');
+          router.replace('/dashboard');
+        }, 500);
+        
       } else {
-        Alert.alert('Error', data.error || data.message || 'Login gagal');
+        const errorMsg = data.error || data.message || 'Login gagal';
+        console.log('❌ Login failed:', errorMsg);
+        Alert.alert('Error', errorMsg);
       }
     } catch (error: any) {
+      console.error('🔥 Login error:', error);
       Alert.alert('Error', error.message || 'Gagal terhubung ke server');
     } finally {
       setLoading(false);
     }
   };
 
-  const dismissKeyboard = () => Keyboard.dismiss();
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
 
   const handleForgotPassword = () => {
     Alert.alert(
@@ -79,6 +138,16 @@ export default function LoginScreen() {
 
   const focusPassword = () => {
     passwordInputRef.current?.focus();
+  };
+
+  const handleEmailSubmit = () => {
+    focusPassword();
+  };
+
+  const handlePasswordSubmit = () => {
+    if (!loading) {
+      handleLogin();
+    }
   };
 
   return (
@@ -100,25 +169,29 @@ export default function LoginScreen() {
         <View style={[styles.orb, styles.orb3]} />
       </View>
 
-      {/* Main Content - PAKAI VIEW BIASA TANPA SCROLLVIEW */}
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <View style={styles.mainContainer}>
-            {/* Header back button saja */}
+            {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity 
                 style={styles.backButton}
                 onPress={() => router.back()}
+                {...(Platform.OS === 'web' ? {
+                  onClick: () => router.back(),
+                  role: 'button' as const,
+                  tabIndex: 0,
+                } : {})}
               >
                 <Ionicons name="chevron-back" size={24} color="#065F46" />
               </TouchableOpacity>
             </View>
 
-            {/* CONTENT AREA - PASTI DI TENGAH */}
+            {/* Main Content */}
             <View style={styles.contentArea}>
               {/* Welcome Section */}
               <View style={styles.welcomeSection}>
@@ -130,16 +203,11 @@ export default function LoginScreen() {
                 </Text>
               </View>
 
-              {/* Login Form Card - PASTI DI TENGAH */}
+              {/* Login Form Card */}
               <View style={styles.formCardContainer}>
-                {/* Blur Overlay */}
-                <BlurView
-                  intensity={Platform.OS === 'ios' ? 80 : 60}
-                  tint="light"
-                  style={styles.formBlur}
-                />
+                {/* Blur/Glass Effect */}
+                <View style={styles.formBlur} />
                 
-                {/* Glass Card Content */}
                 <View style={styles.formCard}>
                   <View style={styles.formContent}>
                     {/* Email Input */}
@@ -152,6 +220,11 @@ export default function LoginScreen() {
                         ]}
                         activeOpacity={1}
                         onPress={() => emailInputRef.current?.focus()}
+                        {...(Platform.OS === 'web' ? {
+                          onClick: () => emailInputRef.current?.focus(),
+                          role: 'button' as const,
+                          tabIndex: 0,
+                        } : {})}
                       >
                         <Ionicons
                           name="mail-outline"
@@ -176,7 +249,7 @@ export default function LoginScreen() {
                           editable={!loading}
                           returnKeyType="next"
                           blurOnSubmit={false}
-                          onSubmitEditing={focusPassword}
+                          onSubmitEditing={handleEmailSubmit}
                         />
                       </TouchableOpacity>
                     </View>
@@ -191,6 +264,11 @@ export default function LoginScreen() {
                         ]}
                         activeOpacity={1}
                         onPress={() => passwordInputRef.current?.focus()}
+                        {...(Platform.OS === 'web' ? {
+                          onClick: () => passwordInputRef.current?.focus(),
+                          role: 'button' as const,
+                          tabIndex: 0,
+                        } : {})}
                       >
                         <Ionicons
                           name="lock-closed-outline"
@@ -213,7 +291,7 @@ export default function LoginScreen() {
                           onFocus={() => setPasswordFocused(true)}
                           onBlur={() => setPasswordFocused(false)}
                           editable={!loading}
-                          onSubmitEditing={handleLogin}
+                          onSubmitEditing={handlePasswordSubmit}
                           returnKeyType="done"
                         />
                         <TouchableOpacity
@@ -221,6 +299,11 @@ export default function LoginScreen() {
                           disabled={loading}
                           style={styles.eyeButton}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          {...(Platform.OS === 'web' ? {
+                            onClick: () => setShowPassword(!showPassword),
+                            role: 'button' as const,
+                            tabIndex: 0,
+                          } : {})}
                         >
                           <Ionicons
                             name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -236,16 +319,26 @@ export default function LoginScreen() {
                       style={styles.forgotButton} 
                       disabled={loading}
                       onPress={handleForgotPassword}
+                      {...(Platform.OS === 'web' ? {
+                        onClick: handleForgotPassword,
+                        role: 'button' as const,
+                        tabIndex: 0,
+                      } : {})}
                     >
                       <Text style={styles.forgotText}>Lupa password?</Text>
                     </TouchableOpacity>
 
-                    {/* Login Button */}
+                    {/* Login Button - FIXED FOR WEB */}
                     <TouchableOpacity
                       style={[styles.loginButton, loading && styles.buttonDisabled]}
-                      onPress={handleLogin}
                       disabled={loading}
                       activeOpacity={0.8}
+                      onPress={handleLoginPress}
+                      {...(Platform.OS === 'web' ? {
+                        onClick: handleLoginPress,
+                        role: 'button' as const,
+                        tabIndex: 0,
+                      } : {})}
                     >
                       <LinearGradient
                         colors={['#10B981', '#059669', '#047857']}
@@ -254,7 +347,7 @@ export default function LoginScreen() {
                         end={{ x: 1, y: 1 }}
                       >
                         {loading ? (
-                          <Ionicons name="refresh" size={20} color="#FFFFFF" />
+                          <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
                           <Ionicons name="log-in" size={20} color="#FFFFFF" />
                         )}
@@ -268,8 +361,13 @@ export default function LoginScreen() {
                     <View style={styles.registerRow}>
                       <Text style={styles.registerText}>Belum punya akun? </Text>
                       <TouchableOpacity
-                        onPress={() => router.push('/register')}
                         disabled={loading}
+                        onPress={() => router.push('/register')}
+                        {...(Platform.OS === 'web' ? {
+                          onClick: () => router.push('/register'),
+                          role: 'button' as const,
+                          tabIndex: 0,
+                        } : {})}
                       >
                         <Text style={styles.registerLink}>Daftar Sekarang</Text>
                       </TouchableOpacity>
@@ -291,7 +389,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0FDF4',
   },
   backgroundGradient: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
   orbContainer: {
     position: 'absolute',
@@ -349,13 +451,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // AREA UTAMA YANG PASTI DI TENGAH
   contentArea: {
     flex: 1,
-    justifyContent: 'center', // VERTICAL CENTER
-    alignItems: 'center', // HORIZONTAL CENTER
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 40, // Beri ruang untuk keyboard
+    paddingBottom: 40,
   },
   welcomeSection: {
     alignItems: 'center',
@@ -377,7 +478,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingHorizontal: 20,
   },
-  // CONTAINER CARD YANG PASTI DI TENGAH
   formCardContainer: {
     width: '100%',
     maxWidth: 400,
@@ -392,11 +492,19 @@ const styles = StyleSheet.create({
     elevation: 15,
   },
   formBlur: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    ...(Platform.OS === 'web' ? {
+      // @ts-ignore - Web-only property
+      backdropFilter: 'blur(10px)',
+    } : {}),
   },
   formCard: {
-    backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     padding: 24,
   },
   formContent: {
@@ -415,7 +523,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderWidth: 1.5,
     borderColor: 'rgba(16, 185, 129, 0.3)',
     borderRadius: 14,
